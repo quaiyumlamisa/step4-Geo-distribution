@@ -1,0 +1,109 @@
+version: '3'
+
+networks:
+  bdnet:
+    ipam:
+      config:
+        - subnet: 10.100.0.0/24
+
+services:
+
+  ridesharingservice-dhaka:
+    build: ./Ride_sharing_service/
+    restart: always
+
+    depends_on: 
+        - communicationservice-dhaka
+    environment: 
+        - LOCATION=dhaka 
+    networks:
+      bdnet:
+        ipv4_address: 10.100.0.2
+    
+
+    
+  communicationservice-dhaka:
+    build: ./Communication_service/
+    restart: always
+   
+    networks:
+      bdnet:
+        ipv4_address: 10.100.0.3
+
+
+  ratingservice:
+    build: ./Rating_service/
+    restart: always
+
+    depends_on: 
+      - mongodb
+
+    networks:
+      bdnet:
+        ipv4_address: 10.100.0.5
+
+
+  nginx-dhaka:
+    build: ./nginx/
+              
+    depends_on:
+      - ridesharingservice-dhaka
+      - ratingservice
+    environment: 
+      - API_V1=ridesharingservice-dhaka
+      - API_V2=ratingservice
+    command: /bin/sh -c "envsubst < /etc/nginx/conf.d/nginx.conf.template > /etc/nginx/conf.d/nginx.conf && nginx -g 'daemon off;'" 
+    networks:
+      bdnet:
+        ipv4_address: 10.100.0.6
+
+
+
+  ridesharingservice-chittagong:
+    build: ./Ride_sharing_service/
+    restart: always
+    environment: 
+      - LOCATION=chittagong
+    networks:
+      bdnet:
+        ipv4_address: 10.100.0.11
+    depends_on: 
+      - communicationservice-chittagong
+
+
+
+  communicationservice-chittagong:
+    build: ./Communication_service/
+    restart: always
+
+    networks:
+      bdnet:
+        ipv4_address: 10.100.0.12
+
+
+      
+  nginx-chittagong:
+    build: ./nginx/
+        
+    depends_on:
+      - ridesharingservice-chittagong
+      - ratingservice
+    environment: 
+      - API_V1=ridesharingservice-chittagong
+      - API_V2=ratingservice
+    command: /bin/sh -c "envsubst < /etc/nginx/conf.d/nginx.conf.template > /etc/nginx/conf.d/nginx.conf && nginx -g 'daemon off;'" 
+    networks:
+      bdnet:
+        ipv4_address: 10.100.0.14 
+          
+          
+  mongodb:
+    image: mongo
+    restart: always
+    networks:
+      bdnet:
+        ipv4_address: 10.100.0.15
+      
+
+
+
